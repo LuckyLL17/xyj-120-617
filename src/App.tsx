@@ -12,6 +12,9 @@ import CommunityDetail from "@/pages/CommunityDetail";
 import Simulator from "@/pages/Simulator";
 import Exchange from "@/pages/Exchange";
 import ExchangeDetail from "@/pages/ExchangeDetail";
+import Login from "@/pages/Login";
+import Register from "@/pages/Register";
+import ChangePassword from "@/pages/ChangePassword";
 
 export default function App() {
   return (
@@ -19,6 +22,9 @@ export default function App() {
       <Layout>
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/change-password" element={<ChangePassword />} />
           <Route path="/knowledge" element={<Knowledge />} />
           <Route path="/knowledge/:id" element={<KnowledgeDetail />} />
           <Route path="/equipment" element={<Equipment />} />
