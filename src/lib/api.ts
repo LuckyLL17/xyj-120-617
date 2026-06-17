@@ -19,6 +19,27 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 export const api = {
+  /** 认证相关 API（实际逻辑由前端 Zustand store + localStorage 处理） */
+  auth: {
+    register: (username: string, password: string) =>
+      request('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({ username, password }),
+      }),
+    login: (username: string, password: string) =>
+      request('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ username, password }),
+      }),
+    logout: () =>
+      request('/auth/logout', { method: 'POST' }),
+    changePassword: (oldPassword: string, newPassword: string) =>
+      request('/auth/change-password', {
+        method: 'PUT',
+        body: JSON.stringify({ oldPassword, newPassword }),
+      }),
+  },
+
   knowledge: {
     list: (params?: {
       level?: string
