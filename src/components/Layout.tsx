@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { useState, useRef, useEffect } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { 
   BookOpen, 
   Backpack, 
@@ -11,8 +11,13 @@ import {
   Shield,
   AlertTriangle,
   Gamepad2,
-  ArrowLeftRight
+  ArrowLeftRight,
+  User,
+  LogOut,
+  Key,
+  ChevronDown
 } from 'lucide-react'
+import { useAuthStore } from '@/stores/authStore'
 import { cn } from '@/lib/utils'
 
 const navItems = [
@@ -27,7 +32,31 @@ const navItems = [
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation()
+  const navigate = useNavigate()
+  const { user, logout } = useAuthStore()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const userMenuRef = useRef<HTMLDivElement>(null)
+
+  // 点击外部关闭用户菜单
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  /**
+   * 处理登出
+   */
+  const handleLogout = async () => {
+    await logout()
+    setUserMenuOpen(false)
+    navigate('/')
+  }
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100">
@@ -67,10 +96,64 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </nav>
 
             <div className="flex items-center gap-3">
-              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-red-900/30 border border-red-800 rounded-full">
-                <AlertTriangle className="w-4 h-4 text-red-400" />
-                <span className="text-sm text-red-300">时刻准备着</span>
+              {/* 用户菜单 - 桌面端 */}
+              <div className="hidden sm:block relative" ref={userMenuRef}>
+                {user ? (
+                  <>
+                    <button
+                      onClick={() => setUserMenuOpen(!userMenuOpen)}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-slate-700/50 hover:bg-slate-700 border border-slate-600 rounded-full transition-all"
+                    >
+                      <div className="w-6 h-6 bg-orange-600 rounded-full flex items-center justify-center">
+                        <User className="w-4 h-4 text-white" />
+                      </div>
+                      <span className="text-sm text-slate-200">{user.username}</span>
+                      <ChevronDown className={cn('w-4 h-4 text-slate-400 transition-transform', userMenuOpen && 'rotate-180')} />
+                    </button>
+
+                    {/* 下拉菜单 */}
+                    {userMenuOpen && (
+                      <div className="absolute right-0 top-full mt-2 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50">
+                        <div className="px-4 py-3 border-b border-slate-700">
+                          <p className="text-sm font-medium text-white">{user.username}</p>
+                          <p className="text-xs text-slate-400">{user.email}</p>
+                        </div>
+                        <div className="py-1">
+                          <button
+                            onClick={() => {
+                              navigate('/settings/password')
+                              setUserMenuOpen(false)
+                            }}
+                            className="w-full flex items-center gap-3 px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+                          >
+                            <Key className="w-4 h-4" />
+                            修改密码
+                          </button>
+                        </div>
+                        <div className="py-1 border-t border-slate-700">
+                          <button
+                            onClick={handleLogout}
+                            className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-400 hover:bg-red-900/30 hover:text-red-300 transition-colors"
+                          >
+                            <LogOut className="w-4 h-4" />
+                            退出登录
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <Link
+                    to="/login"
+                    className="flex items-center gap-2 px-4 py-1.5 bg-orange-600 hover:bg-orange-500 rounded-full text-sm text-white transition-all"
+                  >
+                    <User className="w-4 h-4" />
+                    <span>登录 / 注册</span>
+                  </Link>
+                )}
               </div>
+
+              {/* 移动端菜单按钮 */}
               <button
                 className="md:hidden p-2 hover:bg-slate-700 rounded-lg"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -105,6 +188,45 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   </Link>
                 )
               })}
+
+              {/* 用户相关选项 */}
+              <div className="border-t border-slate-700 my-2 pt-2">
+                {user ? (
+                  <>
+                    <div className="px-4 py-3">
+                      <p className="text-sm font-medium text-white">{user.username}</p>
+                      <p className="text-xs text-slate-400">{user.email}</p>
+                    </div>
+                    <Link
+                      to="/settings/password"
+                      className="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-700 transition-all"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <Key className="w-5 h-5" />
+                      <span>修改密码</span>
+                    </Link>
+                    <button
+                      onClick={() => {
+                        handleLogout()
+                        setMobileMenuOpen(false)
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-400 hover:bg-red-900/30 transition-all text-left"
+                    >
+                      <LogOut className="w-5 h-5" />
+                      <span>退出登录</span>
+                    </button>
+                  </>
+                ) : (
+                  <Link
+                    to="/login"
+                    className="flex items-center gap-3 px-4 py-3 rounded-lg text-orange-400 hover:bg-orange-900/30 transition-all"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <User className="w-5 h-5" />
+                    <span>登录 / 注册</span>
+                  </Link>
+                )}
+              </div>
             </nav>
           </div>
         )}

@@ -1,3 +1,37 @@
+/**
+ * 用户信息接口
+ */
+export interface User {
+  id: string
+  username: string
+  email: string
+  avatar?: string
+  createdAt: string
+  updatedAt: string
+}
+
+/**
+ * 密码强度等级
+ */
+export type PasswordStrength = 'weak' | 'fair' | 'good' | 'strong' | 'very-strong'
+
+/**
+ * 密码验证结果接口
+ */
+export interface PasswordValidationResult {
+  isValid: boolean
+  strength: PasswordStrength
+  score: number
+  errors: string[]
+  requirements: {
+    hasMinLength: boolean
+    hasUpperCase: boolean
+    hasLowerCase: boolean
+    hasSpecialChar: boolean
+    hasNumber: boolean
+  }
+}
+
 export type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced'
 
 export type SurvivalScenario = 

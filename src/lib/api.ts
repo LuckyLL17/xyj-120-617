@@ -19,6 +19,55 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 export const api = {
+  /**
+   * 用户认证相关接口
+   */
+  auth: {
+    // 用户注册
+    register: (data: {
+      username: string
+      email: string
+      password: string
+      confirmPassword: string
+    }) =>
+      request('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    // 用户登录
+    login: (data: { username: string; password: string }) =>
+      request('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    // 用户登出
+    logout: () =>
+      request('/auth/logout', {
+        method: 'POST',
+      }),
+
+    // 修改密码
+    changePassword: (data: {
+      userId: string
+      oldPassword: string
+      newPassword: string
+      confirmNewPassword: string
+    }) =>
+      request('/auth/password', {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+
+    // 验证密码强度
+    validatePassword: (password: string) =>
+      request('/auth/validate-password', {
+        method: 'POST',
+        body: JSON.stringify({ password }),
+      }),
+  },
+
   knowledge: {
     list: (params?: {
       level?: string
