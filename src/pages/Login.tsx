@@ -1,24 +1,26 @@
 /**
  * 用户登录页面组件
  * 提供用户名和密码登录功能
- * 包含登录状态展示和错误提示
+ * 包含登录状态展示、错误提示、记住密码功能
+ * 密码加密后存储在本地 localStorage
  */
 
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, LogIn, Shield, AlertCircle } from 'lucide-react'
+import { Eye, EyeOff, LogIn, Shield, AlertCircle, Lock } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { cn } from '@/lib/utils'
 
 export default function Login() {
   const navigate = useNavigate()
-  const { login, isLoading, error, user, clearError } = useAuthStore()
+  const { login, isLoading, error, user, clearError, rememberMe, setRememberMe, getRememberedCredentials } = useAuthStore()
 
   // 表单状态
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+  const [isLoadingCredentials, setIsLoadingCredentials] = useState(false)
 
   // 如果用户已登录，重定向到首页
   useEffect(() => {
@@ -31,6 +33,27 @@ export default function Login() {
   useEffect(() => {
     clearError()
   }, [clearError])
+
+  // 页面加载时，如果开启了记住密码，自动填充用户名和密码
+  useEffect(() => {
+    const loadCredentials = async () => {
+      if (rememberMe) {
+        setIsLoadingCredentials(true)
+        try {
+          const credentials = await getRememberedCredentials()
+          if (credentials) {
+            setUsername(credentials.username)
+            setPassword(credentials.password)
+          }
+        } catch (error) {
+          console.error('加载记住的密码失败:', error)
+        } finally {
+          setIsLoadingCredentials(false)
+        }
+      }
+    }
+    loadCredentials()
+  }, [rememberMe, getRememberedCredentials])
 
   /**
    * 表单提交处理
@@ -49,10 +72,21 @@ export default function Login() {
       return
     }
 
-    // 调用登录 API
-    const success = await login(username.trim(), password)
+    // 调用登录 API，传入是否记住密码
+    const success = await login(username.trim(), password, rememberMe)
     if (success) {
       navigate('/')
+    }
+  }
+
+  /**
+   * 处理记住密码复选框变化
+   */
+  const handleRememberMeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setRememberMe(e.target.checked)
+    // 如果取消记住密码，立即清除已保存的密码
+    if (!e.target.checked && username) {
+      // 清除由 authStore 的逻辑处理
     }
   }
 
@@ -99,7 +133,7 @@ export default function Login() {
                   'border-slate-600 text-slate-100 placeholder-slate-500',
                   'focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent',
                 )}
-                disabled={isLoading}
+                disabled={isLoading || isLoadingCredentials}
                 autoComplete="username"
               />
             </div>
@@ -121,7 +155,7 @@ export default function Login() {
                     'border-slate-600 text-slate-100 placeholder-slate-500',
                     'focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent',
                   )}
-                  disabled={isLoading}
+                  disabled={isLoading || isLoadingCredentials}
                   autoComplete="current-password"
                 />
                 <button
@@ -138,10 +172,31 @@ export default function Login() {
               </div>
             </div>
 
+            {/* 记住密码选项 */}
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  id="rememberMe"
+                  checked={rememberMe}
+                  onChange={handleRememberMeChange}
+                  className="w-4 h-4 rounded border-slate-500 bg-slate-700 text-orange-600 focus:ring-orange-500 focus:ring-offset-slate-800"
+                  disabled={isLoading}
+                />
+                <span className="text-sm text-slate-300">记住密码</span>
+              </label>
+
+              {/* 加密提示 */}
+              <div className="flex items-center gap-1 text-xs text-slate-500">
+                <Lock className="w-3 h-3" />
+                <span>本地加密存储</span>
+              </div>
+            </div>
+
             {/* 登录按钮 */}
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || isLoadingCredentials}
               className={cn(
                 'w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg',
                 'bg-gradient-to-r from-orange-600 to-red-600 text-white font-semibold',
@@ -150,7 +205,7 @@ export default function Login() {
                 'disabled:opacity-50 disabled:cursor-not-allowed',
               )}
             >
-              {isLoading ? (
+              {isLoading || isLoadingCredentials ? (
                 <span className="inline-block w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
                 <>
@@ -174,6 +229,14 @@ export default function Login() {
         <p className="text-center text-slate-500 text-sm mt-6">
           登录即表示你同意我们的服务条款和隐私政策
         </p>
+
+        {/* 安全说明 */}
+        <div className="mt-4 p-4 bg-slate-800/50 border border-slate-700/50 rounded-lg">
+          <p className="text-xs text-slate-500 text-center">
+            <Lock className="w-3 h-3 inline-block mr-1" />
+            密码使用 AES-256 加密存储在本地，确保您的账号安全
+          </p>
+        </div>
       </div>
     </div>
   )
