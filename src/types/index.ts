@@ -233,6 +233,23 @@ export interface ExchangeRequest {
   createdAt: string
 }
 
+// 用户信息接口
+export interface User {
+  id: string
+  username: string
+  email: string
+  avatar: string
+  createdAt: string
+  updatedAt: string
+}
+
+// 密码强度验证结果
+export interface PasswordStrength {
+  valid: boolean
+  message: string
+  score: number
+}
+
 export interface ApiResponse<T> {
   success: boolean
   data?: T
