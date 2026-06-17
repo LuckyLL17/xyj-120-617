@@ -233,6 +233,22 @@ export interface ExchangeRequest {
   createdAt: string
 }
 
+/** 用户数据（存储在 localStorage 中的结构，密码以哈希形式保存） */
+export interface StoredUser {
+  id: string
+  username: string
+  passwordHash: string
+  salt: string
+  createdAt: string
+}
+
+/** 当前登录用户信息（不包含敏感数据） */
+export interface CurrentUser {
+  id: string
+  username: string
+  createdAt: string
+}
+
 export interface ApiResponse<T> {
   success: boolean
   data?: T
