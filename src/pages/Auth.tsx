@@ -4,9 +4,9 @@
  * 包含密码强度验证和表单校验
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Shield, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { Shield, Eye, EyeOff, Loader2, Lock, Unlock } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import PasswordStrengthMeter from '@/components/PasswordStrengthMeter'
 import type { PasswordValidationResult } from '@/types'
@@ -18,7 +18,19 @@ type AuthMode = 'login' | 'register'
 export default function AuthPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { user, login, register, isLoading, error, clearError } = useAuthStore()
+  const {
+    user,
+    login,
+    register,
+    isLoading,
+    error,
+    clearError,
+    rememberPassword,
+    setRememberPassword,
+    getSavedPassword,
+    getRememberedAccount,
+    hasSavedPassword,
+  } = useAuthStore()
 
   // 当前模式
   const [mode, setMode] = useState<AuthMode>('login')
@@ -35,6 +47,8 @@ export default function AuthPage() {
     useState<PasswordValidationResult | null>(null)
   // 表单提交错误
   const [formError, setFormError] = useState<string | null>(null)
+  // 是否正在自动填充密码
+  const [isAutoFilling, setIsAutoFilling] = useState(false)
 
   // 如果用户已登录，跳转到首页
   useEffect(() => {
@@ -49,6 +63,50 @@ export default function AuthPage() {
     clearError()
     setFormError(null)
   }, [mode, clearError])
+
+  /**
+   * 页面加载时自动填充记住的账户和密码
+   */
+  useEffect(() => {
+    const rememberedAccount = getRememberedAccount()
+    if (rememberedAccount && mode === 'login') {
+      setUsername(rememberedAccount)
+      setRememberPassword(true)
+
+      // 如果有保存的密码，自动填充
+      if (hasSavedPassword(rememberedAccount)) {
+        setIsAutoFilling(true)
+        getSavedPassword(rememberedAccount).then((savedPassword) => {
+          if (savedPassword) {
+            setPassword(savedPassword)
+          }
+          setIsAutoFilling(false)
+        })
+      }
+    }
+  }, [mode, getRememberedAccount, getSavedPassword, hasSavedPassword, setRememberPassword])
+
+  /**
+   * 用户名变化时，如果有保存的密码则自动填充
+   */
+  const handleUsernameChange = useCallback(
+    (value: string) => {
+      setUsername(value)
+
+      // 登录模式下，检查是否有保存的密码
+      if (mode === 'login' && value && hasSavedPassword(value)) {
+        setIsAutoFilling(true)
+        setRememberPassword(true)
+        getSavedPassword(value).then((savedPassword) => {
+          if (savedPassword) {
+            setPassword(savedPassword)
+          }
+          setIsAutoFilling(false)
+        })
+      }
+    },
+    [mode, hasSavedPassword, getSavedPassword, setRememberPassword],
+  )
 
   /**
    * 验证密码强度（前端验证，减少后端请求）
@@ -123,7 +181,26 @@ export default function AuthPage() {
     setConfirmPassword('')
     setPasswordValidation(null)
     setFormError(null)
+    setIsAutoFilling(false)
     clearError()
+
+    // 切换到登录模式时，如果有记住的账户则自动填充
+    if (newMode === 'login') {
+      const rememberedAccount = getRememberedAccount()
+      if (rememberedAccount) {
+        setUsername(rememberedAccount)
+        setRememberPassword(true)
+        if (hasSavedPassword(rememberedAccount)) {
+          setIsAutoFilling(true)
+          getSavedPassword(rememberedAccount).then((savedPassword) => {
+            if (savedPassword) {
+              setPassword(savedPassword)
+            }
+            setIsAutoFilling(false)
+          })
+        }
+      }
+    }
   }
 
   /**
@@ -140,7 +217,7 @@ export default function AuthPage() {
           setFormError('请输入用户名和密码')
           return
         }
-        await login(username, password)
+        await login(username, password, rememberPassword)
       } else {
         // 注册
         if (!username || !email || !password || !confirmPassword) {
@@ -169,7 +246,7 @@ export default function AuthPage() {
           return
         }
 
-        await register(username, email, password, confirmPassword)
+        await register(username, email, password, confirmPassword, rememberPassword)
       }
     } catch {
       // 错误已在 store 中处理
@@ -237,10 +314,11 @@ export default function AuthPage() {
               <input
                 type="text"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={(e) => handleUsernameChange(e.target.value)}
                 className="w-full px-4 py-2.5 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
                 placeholder={mode === 'login' ? '请输入用户名或邮箱' : '请输入用户名'}
                 disabled={isLoading}
+                autoComplete="username"
               />
             </div>
 
@@ -273,7 +351,8 @@ export default function AuthPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full px-4 py-2.5 pr-10 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
                   placeholder="请输入密码"
-                  disabled={isLoading}
+                  disabled={isLoading || isAutoFilling}
+                  autoComplete="current-password"
                 />
                 <button
                   type="button"
@@ -287,6 +366,67 @@ export default function AuthPage() {
                   )}
                 </button>
               </div>
+            </div>
+
+            {/* 记住密码选项 */}
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 cursor-pointer group">
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    checked={rememberPassword}
+                    onChange={(e) => setRememberPassword(e.target.checked)}
+                    className="sr-only"
+                    disabled={isLoading}
+                  />
+                  <div
+                    className={cn(
+                      'w-5 h-5 rounded border-2 flex items-center justify-center transition-all',
+                      rememberPassword
+                        ? 'bg-orange-600 border-orange-600'
+                        : 'border-slate-500 group-hover:border-slate-400',
+                    )}
+                  >
+                    {rememberPassword && (
+                      <svg
+                        className="w-3 h-3 text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={3}
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                    )}
+                  </div>
+                </div>
+                <span className="text-sm text-slate-300 flex items-center gap-1.5">
+                  {rememberPassword ? (
+                    <Unlock className="w-4 h-4 text-orange-400" />
+                  ) : (
+                    <Lock className="w-4 h-4 text-slate-500" />
+                  )}
+                  记住密码
+                </span>
+              </label>
+
+              {mode === 'login' && username && hasSavedPassword(username) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const store = useAuthStore.getState()
+                    store.clearSavedPassword(username)
+                    setPassword('')
+                  }}
+                  className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+                >
+                  清除保存的密码
+                </button>
+              )}
             </div>
 
             {/* 密码强度指示器（仅注册时显示） */}
@@ -374,9 +514,14 @@ export default function AuthPage() {
         </div>
 
         {/* 安全提示 */}
-        <p className="mt-6 text-center text-xs text-slate-500">
-          您的密码已加密存储，我们无法查看您的原始密码
-        </p>
+        <div className="mt-6 text-center space-y-1">
+          <p className="text-xs text-slate-500">
+            密码使用 AES-256 加密存储在本地浏览器
+          </p>
+          <p className="text-xs text-slate-600">
+            后端使用 bcrypt 加密存储，无法查看您的原始密码
+          </p>
+        </div>
       </div>
     </div>
   )
