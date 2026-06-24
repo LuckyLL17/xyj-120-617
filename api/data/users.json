@@ -1,0 +1,12 @@
+{
+  "users": [
+    {
+      "id": "user_1781725516682_6h7pw8rt",
+      "username": "Aa123456!",
+      "email": "Aa123456!@11.com",
+      "password": "$2b$10$xmTk.ypXCEkRAlnwN1jtZ.5/x7OJfnN.N95ijxfgjWRmXrLIQXawS",
+      "createdAt": "2026-06-17T19:45:16.682Z",
+      "updatedAt": "2026-06-17T19:45:16.682Z"
+    }
+  ]
+}
