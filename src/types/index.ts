@@ -233,6 +233,54 @@ export interface ExchangeRequest {
   createdAt: string
 }
 
+/**
+ * 用户信息接口
+ */
+export interface User {
+  id: string
+  username: string
+  email?: string
+  avatar?: string
+  createdAt: string
+  updatedAt: string
+}
+
+/**
+ * 登录请求参数
+ */
+export interface LoginRequest {
+  username: string
+  password: string
+}
+
+/**
+ * 注册请求参数
+ */
+export interface RegisterRequest {
+  username: string
+  password: string
+  confirmPassword: string
+  email?: string
+}
+
+/**
+ * 修改密码请求参数
+ */
+export interface ChangePasswordRequest {
+  userId: string
+  oldPassword: string
+  newPassword: string
+  confirmNewPassword: string
+}
+
+/**
+ * 登录/注册响应数据
+ */
+export interface AuthResponse {
+  user: User
+  message: string
+}
+
 export interface ApiResponse<T> {
   success: boolean
   data?: T
